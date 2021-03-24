@@ -130,16 +130,27 @@ where
    fn synthesize<CS: ConstraintSystem<S>>(self, cs: &mut CS) -> Result<(), SynthesisError>
    {
 	//allocate private variable document and generating constraints corresponding to it
-	let document_value = self.document;
-	let document = cs.alloc(|| "document",|| document_value.ok_or(SynthesisError::AssignmentMissing))?;
+	let document_value = if let Some(document) = self.document
+	{document.iter().collect::<Vec<_>>()}
+	else{(0..LEN).map(|_| None).collect::<Vec<_>>() };
+	assert_eq!(document_value.len(), LEN);
 	
 	//allocate public variable redactor and generating constraints corresponding to it
-	let redactor_value = self.redactor;
-	let redactor = cs.alloc_input(|| "redactor", || redactor_value.ok_or(SynthesisError::AssignmentMissing))?;
+	let redactor_value = if let Some(redactor) = self.redactor
+	{redactor.iter().collect::<Vec<_>>()}
+	else{(0..LEN).map(|_| None).collect::<Vec<_>>() };
+	assert_eq!(redactor_value.len(), LEN);
 	
 	//allocate public variable redacted and generating constraints corresponding to it
-	let redacted_value = self.redacted;
-	let redacted = cs.alloc_input(|| "redacted", || redacted_value.ok_or(SynthesisError::AssignmentMissing))?;	
+	let redacted_value = if let Some(redacted) = self.redacted
+	{redacted.iter().collect::<Vec<_>>()}
+	else{(0..LEN).map(|_| None).collect::<Vec<_>>()};
+	assert_eq!(redacted_value.len(), LEN);
+
+	for i in 1..LEN{
+	let document = cs.alloc(|| "document", || Ok(*document_value[i]))?;	
+	let redactor = cs.alloc(|| "redactor", || Ok(*redactor_value[i]))?;
+	let redacted = cs.alloc_input(|| "redacted", || Ok(*redacted_value[i]))?;	
 
 	//enforcing the constraints
 	cs.enforce(
@@ -147,7 +158,7 @@ where
             			|lc| lc + document,
             			|lc| lc + redactor,
             			|lc| lc + redacted
-        		  );
+        		  );}
 	Ok(())
    }
 }
